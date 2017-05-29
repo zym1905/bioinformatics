@@ -103,7 +103,7 @@ public class AlleleShare {
      * @param vcfFile vcf file path
      */
     public void loadVCF(String vcfFile) {
-        VCFFileReader reader = new VCFFileReader(new File(vcfFile));
+        VCFFileReader reader = new VCFFileReader(new File(vcfFile), false);
         VCFHeader header = reader.getFileHeader();
         samples = header.getGenotypeSamples();
 
@@ -122,15 +122,16 @@ public class AlleleShare {
                 byte genotypeVal = 0;
                 switch (type) {
                     case HET:
-                        genotypeVal = (1 << 4) & 2;
+                        genotypeVal = (1 << 4) | 2;
                         break;
                     case HOM_REF:
-                        genotypeVal = (1 << 4) & 1;
+                        genotypeVal = (1 << 4) | 1;
                         break;
                     case HOM_VAR:
-                        genotypeVal = (2 << 4) & 2;
+                        genotypeVal = (2 << 4) | 2;
                         break;
                 }
+                //System.err.println(type.toString() + "\t" + genotypeVal);
                 this.genotypes[sampleIndex][variantIndex] = genotypeVal;
 
                 sampleIndex++;
@@ -157,6 +158,8 @@ public class AlleleShare {
                     byte genotype1 = genotypes[sampleIndex1][variantIndex];
                     byte genotype2 = genotypes[sampleIndex2][variantIndex];
 
+                    //System.err.println(genotype1 + "\t" + genotype2);
+
                     if(genotype1 == 0 || genotype2 == 0)
                         continue;
 
@@ -165,12 +168,14 @@ public class AlleleShare {
                 }
                 stringBuilder.setLength(0);
                 stringBuilder.append(samples.get(sampleIndex1));
-                stringBuilder.append("-");
+                stringBuilder.append("\t");
                 stringBuilder.append(samples.get(sampleIndex2));
+                stringBuilder.append("\t");
+                stringBuilder.append(shareAlleleNumber);
                 stringBuilder.append("\t");
                 stringBuilder.append(totalAlleleNumber);
                 stringBuilder.append("\t");
-                stringBuilder.append(shareAlleleNumber);
+                stringBuilder.append(shareAlleleNumber/(double)totalAlleleNumber);
                 stringBuilder.append("\n");
 
                 fileWriter.write(stringBuilder.toString());
