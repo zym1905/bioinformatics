@@ -20,43 +20,62 @@ import java.util.*;
  */
 public class AlleleShare {
 
-    /**
-     * bit 1 count for a byte for quick calculation
-     */
-    public static byte[] bitCountCache = new byte[256];
+    public static int alleleBitSize = 2;
+
+    public static int genotypeNumPeRound = 6;
+
+    public static int countCacheSize = (int) Math.pow(2, alleleBitSize * genotypeNumPeRound);
+
+    public static int genotypeShift;
 
     /**
-     * allele share count cache, the size is 256 * 256
+     * allele share count cache array
      */
-    public static byte[][] alleleCountCache = new byte[256][256];
+    public static byte[][][] alleleCountCache = new byte[countCacheSize][countCacheSize][2];
 
     static {
-        //calculate the bit count cache
-        for(int i = 0; i < 256; i++) {
-            bitCountCache[i] = count1bits(i);
+        int tmp = 1;
+        for(int i = 1; i < alleleBitSize; i++) {
+            tmp = (tmp << 1) + 1;
         }
+        genotypeShift = tmp;
 
         //calculate the allele count cache
-        for(int i = 0; i < 256; i++) {
-            for(int j = 0; j < 256; j++) {
-                alleleCountCache[i][j] = bitCountCache[(i&j)];
+        for(int i = 0; i < countCacheSize; i++) {
+            for(int j = 0; j < countCacheSize; j++) {
+                byte totalAlleleCount = 0;
+                byte shareAlleleCount = 0;
+
+                for(int k = 0; k < genotypeNumPeRound; k++) {
+                    int g1 = (i >> (alleleBitSize * k)) & genotypeShift;
+                    int g2 = (j >> (alleleBitSize * k)) & genotypeShift;
+
+                    if(g1 == 0 || g2 == 0)
+                        continue;
+
+                    totalAlleleCount += 2;
+                    shareAlleleCount += countShareAllele(g1, g2);
+                }
+                //System.err.println(i + "\t" + j + "\t" + totalAlleleCount + "\t" + shareAlleleCount);
+                alleleCountCache[i][j][0] = totalAlleleCount;
+                alleleCountCache[i][j][1] = shareAlleleCount;
             }
         }
     }
 
     /**
-     * count bit 1 number
-     * @param val input value
-     * @return bit 1 count
+     * count share allele number
+     * @param g1 genotype 1
+     * @param g2 genotype 2
+     * @return share allele count
      */
-    public static byte count1bits(int val) {
-        int count;
+    public static byte countShareAllele(int g1, int g2) {
+        if(g1 == g2)
+            return 2;
+        else if(g1 == 1 || g2 == 1)
+            return 1;
 
-        for (count = 0; val != 0; count++) {
-            val &= (val - 1);
-        }
-
-        return (byte) count;
+        return 0;
     }
 
 
@@ -68,12 +87,12 @@ public class AlleleShare {
     /**
      * total variant number in vcf
      */
-    private int positionNumber;
+    private int variantNumber;
 
     /**
      * multi sample genotype matrix
      */
-    private byte[][] genotypes;
+    private short[][] genotypes;
 
     /**
      *
@@ -88,12 +107,12 @@ public class AlleleShare {
     /**
      * constructor
      * @param sampleNumber total sample number
-     * @param positionNumber total variant number
+     * @param variantNumber total variant number
      */
-    public AlleleShare(int sampleNumber, int positionNumber) {
+    public AlleleShare(int sampleNumber, int variantNumber) {
         this.sampleNumber = sampleNumber;
-        this.positionNumber = positionNumber;
-        genotypes = new byte[sampleNumber][positionNumber];
+        this.variantNumber = variantNumber;
+        genotypes = new short[sampleNumber][variantNumber / genotypeNumPeRound + 1];
         samples = new ArrayList<>();
         //results = new HashMap<>();
     }
@@ -108,11 +127,13 @@ public class AlleleShare {
         samples = header.getGenotypeSamples();
 
         CloseableIterator<VariantContext> variantContexts =  reader.iterator();
-        int variantIndex = 0;
+        int variantCount = 0;
+        int variantIndex;
         while(variantContexts.hasNext()) {
             VariantContext variantContext = variantContexts.next();
             GenotypesContext genotypes = variantContext.getGenotypes();
             Iterator<Genotype> genotypeIterator=  genotypes.iterator();
+            variantIndex = variantCount / genotypeNumPeRound;
 
             int sampleIndex = 0;
             while(genotypeIterator.hasNext()) {
@@ -122,22 +143,28 @@ public class AlleleShare {
                 byte genotypeVal = 0;
                 switch (type) {
                     case HET:
-                        genotypeVal = (1 << 4) | 2;
+                        genotypeVal = 1;
                         break;
                     case HOM_REF:
-                        genotypeVal = (1 << 4) | 1;
+                        genotypeVal = 2;
                         break;
                     case HOM_VAR:
-                        genotypeVal = (2 << 4) | 2;
+                        genotypeVal = 3;
                         break;
                 }
                 //System.err.println(type.toString() + "\t" + genotypeVal);
-                this.genotypes[sampleIndex][variantIndex] = genotypeVal;
+
+                int originalGenotype = this.genotypes[sampleIndex][variantIndex];
+                if(variantCount % genotypeNumPeRound != 0)
+                    this.genotypes[sampleIndex][variantIndex] = (short) (originalGenotype << alleleBitSize | genotypeVal);
+                else {
+                    this.genotypes[sampleIndex][variantIndex] = genotypeVal;
+                }
 
                 sampleIndex++;
             }
 
-            variantIndex++;
+            variantCount++;
         }
 
         reader.close();
@@ -154,17 +181,14 @@ public class AlleleShare {
             for (int sampleIndex2 = sampleIndex1 + 1; sampleIndex2 < sampleNumber; sampleIndex2++) {
                 int totalAlleleNumber = 0;
                 int shareAlleleNumber = 0;
-                for(int variantIndex = 0; variantIndex < positionNumber; variantIndex++) {
-                    byte genotype1 = genotypes[sampleIndex1][variantIndex];
-                    byte genotype2 = genotypes[sampleIndex2][variantIndex];
+                for(int variantIndex = 0; variantIndex < variantNumber / genotypeNumPeRound + 1; variantIndex++) {
+                    short genotype1 = genotypes[sampleIndex1][variantIndex];
+                    short genotype2 = genotypes[sampleIndex2][variantIndex];
 
-                    //System.err.println(genotype1 + "\t" + genotype2);
+                   //System.err.println(genotype1 + "\t" + genotype2);
 
-                    if(genotype1 == 0 || genotype2 == 0)
-                        continue;
-
-                    totalAlleleNumber += 2;
-                    shareAlleleNumber += alleleCountCache[genotype1][genotype2];
+                    totalAlleleNumber += alleleCountCache[genotype1][genotype2][0];
+                    shareAlleleNumber += alleleCountCache[genotype1][genotype2][1];
                 }
                 stringBuilder.setLength(0);
                 stringBuilder.append(samples.get(sampleIndex1));
