@@ -28,6 +28,7 @@ public class DepthSum {
         StringBuffer stringBuffer = new StringBuffer();
 
         public void map(Object key, Text value, Context context) throws IOException, InterruptedException {
+            if(value.toString().startsWith("#")) return;
             String[] lines = value.toString().split("\t");
 
             stringBuffer.setLength(0);
