@@ -46,16 +46,18 @@ public class VCFDPCount {
 
             int dpSum = 0;
             int anSum = 0;
+            int sampleSum = 0;
             //遍历genotypes
             while(genotypeIterator.hasNext()) {
                 Genotype genotype = genotypeIterator.next();
                 if(genotype.isCalled()) {
                     dpSum += genotype.getDP();
                     anSum += 2;
+                    sampleSum++;
                 }
             }
             StringBuffer stringBuffer = new StringBuffer();
-            stringBuffer.append(variantContext.getReference());
+            stringBuffer.append(variantContext.getContig());
             stringBuffer.append("\t");
             stringBuffer.append(variantContext.getStart());
             stringBuffer.append("\t");
@@ -63,8 +65,8 @@ public class VCFDPCount {
             stringBuffer.append("\t");
             stringBuffer.append(anSum);
             stringBuffer.append("\t");
-            stringBuffer.append(dpSum / (double) anSum);
-            sb.append("\n");
+            stringBuffer.append(dpSum / (double) sampleSum);
+            stringBuffer.append("\n");
             outputDPFileWriter.write(stringBuffer.toString());
         }
         outputDPFileWriter.close();
