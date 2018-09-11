@@ -93,7 +93,7 @@
                         <addMavenDescriptor>false</addMavenDescriptor>
                         <manifest>
                             <addClasspath>true</addClasspath>
-                            <mainClass>org.bgi.flexlab.zhangyong.vcfdpcount.VCFDPCount</mainClass>
+                            <mainClass>org.bgi.flexlab.zhangyong.vcfptvcount.VCFCount</mainClass>
                         </manifest>
                     </archive>
                 </configuration>
