@@ -27,31 +27,16 @@ public class SampleVariantStatistics {
     }
 
     public void countGenotypes(GenotypesContext genotypes, boolean isSNP, boolean isDel, boolean isIns,
-                               VariantStatistics.VariantType variantType) {
-        int alleleNumber = 0;
-        int altAlleleNumber = 0;
-        boolean isSingleton = false;
-        double alleleFrequency = 0;
-        for (Genotype genotype : genotypes) {
-            //cal af or ac info
-            if(genotype.isNoCall())
-                continue;
-            alleleNumber += 2;
-            if(genotype.isHet())
-                altAlleleNumber++;
-            if(genotype.isHomVar())
-                altAlleleNumber += 2;
-        }
-        alleleFrequency = altAlleleNumber / (double) alleleNumber;
-        if(altAlleleNumber == 1)
-            isSingleton = true;
+                               VariantStatistics.VariantType variantType, int alleleNumber, double alleleFrequency,
+                               boolean isSingleton, Region regions) {
 
         for (Genotype genotype : genotypes) {
             if (sampleVariantStatistics.get(genotype.getSampleName()).get(variantType) == null) {
-                VariantStatistics variantStatistics = new VariantStatistics();
+                VariantStatistics variantStatistics = new VariantStatistics(regions);
                 sampleVariantStatistics.get(genotype.getSampleName()).put(variantType, variantStatistics);
             }
-            sampleVariantStatistics.get(genotype.getSampleName()).get(variantType).countGenotype(genotype, isSNP, isDel, isIns);
+            sampleVariantStatistics.get(genotype.getSampleName()).get(variantType).
+                    countGenotype(genotype, isSNP, isDel, isIns, alleleNumber, alleleFrequency, isSingleton);
         }
 
         }
