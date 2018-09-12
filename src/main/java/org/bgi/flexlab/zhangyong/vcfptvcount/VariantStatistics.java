@@ -32,12 +32,14 @@ public class VariantStatistics {
     private Region afRegions = null;
 
     public VariantStatistics(Region regions) {
-        if(regions.isAC()) {
-            this.acRegions = regions;
-            acNums = new int[acRegions.size()];
-        } else {
-            this.afRegions = regions;
-            afNums = new int[acRegions.size()];
+        if(regions != null) {
+            if(regions.isAC()) {
+                this.acRegions = regions;
+                acNums = new int[acRegions.size()];
+            } else  {
+                this.afRegions = regions;
+                afNums = new int[acRegions.size()];
+            }
         }
     }
 
