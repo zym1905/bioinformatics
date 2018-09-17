@@ -25,32 +25,28 @@ public class VariantStatistics {
     private int insNum;
     private int delNum;
     private int indelNum;
-    private int singletonNum;
     private int[] acNums;
     private int[] afNums;
     private Region acRegions = null;
     private Region afRegions = null;
 
-    public VariantStatistics(Region regions) {
-        if(regions != null) {
-            if(regions.isAC()) {
-                this.acRegions = regions;
-                acNums = new int[acRegions.size()];
-            } else  {
-                this.afRegions = regions;
-                afNums = new int[acRegions.size()];
-            }
+    public VariantStatistics(Region acRegions, Region afRegions) {
+        if(acRegions != null && acRegions.isAC()) {
+            this.acRegions = acRegions;
+            acNums = new int[acRegions.size()];
+        }
+        if(afRegions != null && !afRegions.isAC()) {
+            this.afRegions = afRegions;
+            afNums = new int[afRegions.size()];
         }
     }
 
     public void countGenotype( Genotype genotype, boolean isSNP, boolean isDel, boolean isIns,
-                               int alleleNumber, double alleleFrequency, boolean isSingleton) {
+                               int alleleNumber, double alleleFrequency) {
         if(genotype.isHomVar())
             homNum++;
         if(genotype.isHet()) {
             hetNum++;
-            if(isSingleton)
-                singletonNum++;
         }
         if((genotype.isHomVar() || genotype.isHet())) {
             if(isSNP)
@@ -65,11 +61,13 @@ public class VariantStatistics {
             }
             if(acRegions != null) {
                 int index = acRegions.getRegionIndex(alleleNumber);
-                acNums[index]++;
+                if(index >= 0)
+                    acNums[index]++;
             }
             if(afRegions != null) {
                 int index = afRegions.getRegionIndex(alleleFrequency);
-                afNums[index]++;
+                if(index >= 0)
+                    afNums[index]++;
             }
         }
     }
@@ -83,27 +81,25 @@ public class VariantStatistics {
         sb.append("\t");
         sb.append(snpNum);
         sb.append("\t");
+        sb.append(indelNum);
+        sb.append("\t");
         sb.append(insNum);
         sb.append("\t");
         sb.append(delNum);
-        sb.append("\t");
-        sb.append(indelNum);
-        sb.append("\t");
-        sb.append(singletonNum);
 
-        if(acNums != null & acNums.length > 0) {
+        if(acRegions != null) {
             for (int acNum : acNums) {
                 sb.append("\t");
                 sb.append(acNum);
             }
         }
-        if(afNums != null & afNums.length > 0) {
+        if(afRegions != null) {
             for (int afNum : afNums) {
                 sb.append("\t");
                 sb.append(afNum);
             }
         }
-
+        sb.append("\n");
         return sb.toString();
     }
 }

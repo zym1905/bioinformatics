@@ -28,15 +28,15 @@ public class SampleVariantStatistics {
 
     public void countGenotypes(GenotypesContext genotypes, boolean isSNP, boolean isDel, boolean isIns,
                                VariantStatistics.VariantType variantType, int alleleNumber, double alleleFrequency,
-                               boolean isSingleton, Region regions) {
+                               Region acRegions, Region afRegions) {
 
         for (Genotype genotype : genotypes) {
             if (sampleVariantStatistics.get(genotype.getSampleName()).get(variantType) == null) {
-                VariantStatistics variantStatistics = new VariantStatistics(regions);
+                VariantStatistics variantStatistics = new VariantStatistics(acRegions, afRegions);
                 sampleVariantStatistics.get(genotype.getSampleName()).put(variantType, variantStatistics);
             }
             sampleVariantStatistics.get(genotype.getSampleName()).get(variantType).
-                    countGenotype(genotype, isSNP, isDel, isIns, alleleNumber, alleleFrequency, isSingleton);
+                    countGenotype(genotype, isSNP, isDel, isIns, alleleNumber, alleleFrequency);
         }
 
         }
